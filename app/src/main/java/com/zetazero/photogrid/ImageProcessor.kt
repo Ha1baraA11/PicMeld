@@ -18,8 +18,8 @@ import java.io.InputStream
 
 object ImageProcessor {
 
-    // 最大边长像素：防止内存爆栈的 OOM 问题限制
-    private const val MAX_SINGLE_IMAGE_DIMENS = 2000
+    // 最大边长像素：防止内存爆栈的 OOM 问题限制，提高到 8000 以避免普通的截图发生任何压缩扭曲
+    private const val MAX_SINGLE_IMAGE_DIMENS = 8000
 
     suspend fun generateGrids(
         context: Context,
@@ -42,8 +42,21 @@ object ImageProcessor {
                     if (b.height > maxH) maxH = b.height
                 }
                 
-                val quadrantW = minOf(maxW, MAX_SINGLE_IMAGE_DIMENS)
-                val quadrantH = minOf(maxH, MAX_SINGLE_IMAGE_DIMENS)
+                var quadW = maxW.toFloat()
+                var quadH = maxH.toFloat()
+
+                // 同步等比例缩小四格画板区域尺寸，而不是分别生硬砍断高宽，从而彻底消灭白边
+                if (quadW > MAX_SINGLE_IMAGE_DIMENS || quadH > MAX_SINGLE_IMAGE_DIMENS) {
+                    val limitFactor = minOf(
+                        MAX_SINGLE_IMAGE_DIMENS / quadW,
+                        MAX_SINGLE_IMAGE_DIMENS / quadH
+                    )
+                    quadW *= limitFactor
+                    quadH *= limitFactor
+                }
+
+                val quadrantW = quadW.toInt()
+                val quadrantH = quadH.toInt()
 
                 // 2x2 网格长宽各自乘以 2
                 val outWidth = quadrantW * 2

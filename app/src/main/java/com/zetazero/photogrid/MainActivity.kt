@@ -2,6 +2,8 @@ package com.zetazero.photogrid
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.View
@@ -23,10 +25,22 @@ class MainActivity : AppCompatActivity() {
     private val viewModel: MainViewModel by viewModels()
     private lateinit var photoAdapter: PhotoAdapter
 
-    // Photo Picker: 让用户选择系统图片的拦截器
-    private val pickMultipleMedia = registerForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(200)) { uris ->
-        if (uris.isNotEmpty()) {
-            viewModel.addUris(uris)
+    // Photo Picker: 在裸机或纯虚拟机系统极易闪退。更换为经典传统多选的兼容写法：
+    private val pickMultipleMediaCompat = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val uris = mutableListOf<Uri>()
+            val data = result.data
+            if (data?.clipData != null) {
+                val count = data.clipData!!.itemCount
+                for (i in 0 until count) {
+                    uris.add(data.clipData!!.getItemAt(i).uri)
+                }
+            } else if (data?.data != null) {
+                uris.add(data.data!!)
+            }
+            if (uris.isNotEmpty()) {
+                viewModel.addUris(uris)
+            }
         }
     }
 
@@ -54,13 +68,24 @@ class MainActivity : AppCompatActivity() {
         photoAdapter = PhotoAdapter { uri ->
             viewModel.removeUri(uri)
         }
+        // 关键修复：必须设置 LayoutManager，否则视图只会收集数据，不知道怎么排列，因此显示空白
+        binding.rvPhotos.layoutManager = androidx.recyclerview.widget.GridLayoutManager(this, 3)
         binding.rvPhotos.adapter = photoAdapter
     }
 
     private fun setupListeners() {
         binding.btnSelect.setOnClickListener {
-            // PickVisualMedia 会在所有设备上唤醒内置或是降级自带的图库照片选择器
-            pickMultipleMedia.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+            // 使用传统的 ACTION_GET_CONTENT 完全兼容任何设备并抓取异常，防闪退
+            val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
+                type = "image/*"
+                putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true)
+                addCategory(Intent.CATEGORY_OPENABLE)
+            }
+            try {
+                pickMultipleMediaCompat.launch(Intent.createChooser(intent, "请选择多张图片"))
+            } catch (e: Exception) {
+                Toast.makeText(this@MainActivity, "错误：当前设备未安装任何能够响应图片的图库或文件管理器！", Toast.LENGTH_LONG).show()
+            }
         }
 
         binding.btnGenerate.setOnClickListener {

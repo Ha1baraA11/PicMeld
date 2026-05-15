@@ -30,11 +30,111 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvTitle" />
 
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/chipGroupLayout"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        app:singleSelection="true"
+        app:selectionRequired="true"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tvSummary">
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip2x2"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="2x2 方格"
+            android:checked="true"
+            style="@style/Widget.MaterialComponents.Chip.Choice" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip3x3"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="3x3 方格"
+            style="@style/Widget.MaterialComponents.Chip.Choice" />
+
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chip1x3"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="1x3 竖条"
+            style="@style/Widget.MaterialComponents.Chip.Choice" />
+    </com.google.android.material.chip.ChipGroup>
+
+    <LinearLayout
+        android:id="@+id/llOptions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="8dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginEnd="16dp"
+        app:layout_constraintTop_toBottomOf="@id/chipGroupLayout"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="背景色"
+                android:textSize="13sp"
+                android:textColor="#555555" />
+
+            <View android:id="@+id/colorWhite"  android:layout_width="28dp" android:layout_height="28dp" android:layout_marginStart="12dp" android:background="@android:color/white" />
+            <View android:id="@+id/colorBlack"  android:layout_width="28dp" android:layout_height="28dp" android:layout_marginStart="6dp" android:background="@android:color/black" />
+            <View android:id="@+id/colorRed"    android:layout_width="28dp" android:layout_height="28dp" android:layout_marginStart="6dp" />
+            <View android:id="@+id/colorBlue"   android:layout_width="28dp" android:layout_height="28dp" android:layout_marginStart="6dp" />
+            <View android:id="@+id/colorGreen"  android:layout_width="28dp" android:layout_height="28dp" android:layout_marginStart="6dp" />
+            <View android:id="@+id/colorGray"   android:layout_width="28dp" android:layout_height="28dp" android:layout_marginStart="6dp" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="6dp">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="间距"
+                android:textSize="13sp"
+                android:textColor="#555555" />
+
+            <SeekBar
+                android:id="@+id/seekBarGap"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
+                android:max="40"
+                android:progress="0" />
+
+            <TextView
+                android:id="@+id/tvGapValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0px"
+                android:textSize="13sp"
+                android:layout_marginStart="8dp" />
+        </LinearLayout>
+    </LinearLayout>
+
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rvPhotos"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="8dp"
         android:layout_marginBottom="16dp"
         android:layout_marginStart="8dp"
         android:layout_marginEnd="8dp"
@@ -42,7 +142,7 @@
         app:layout_constraintBottom_toTopOf="@id/llActions"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tvSummary"
+        app:layout_constraintTop_toBottomOf="@id/llOptions"
         tools:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
         tools:listitem="@layout/item_photo"
         tools:spanCount="3" />

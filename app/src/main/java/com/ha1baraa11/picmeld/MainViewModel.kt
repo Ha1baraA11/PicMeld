@@ -1,5 +1,6 @@
 package com.ha1baraa11.picmeld
 
+import android.graphics.Color
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,7 +15,10 @@ data class MainUiState(
     val progressMessage: String = "",
     val progressValue: Int = 0,
     val generationError: String? = null,
-    val isSuccess: Boolean = false
+    val isSuccess: Boolean = false,
+    val selectedLayout: LayoutConfig = LayoutConfig.LAYOUT_2X2,
+    val bgColor: Int = Color.WHITE,
+    val gapPx: Int = 0
 )
 
 class MainViewModel : ViewModel() {
@@ -40,11 +44,32 @@ class MainViewModel : ViewModel() {
     }
 
     private fun updateUriState(newList: List<Uri>) {
+        val groupSize = _uiState.value.selectedLayout.groupSize
         _uiState.value = _uiState.value.copy(
             selectedUris = newList,
             totalCount = newList.size,
-            expectedOutputCount = ceil(newList.size / 4.0).toInt()
+            expectedOutputCount = ceil(newList.size / groupSize.toDouble()).toInt()
         )
+    }
+
+    fun setLayout(layout: LayoutConfig) {
+        val current = _uiState.value
+        _uiState.value = current.copy(
+            selectedLayout = layout,
+            expectedOutputCount = ceil(current.totalCount / layout.groupSize.toDouble()).toInt()
+        )
+    }
+
+    fun reorderUris(newOrder: List<Uri>) {
+        _uiState.value = _uiState.value.copy(selectedUris = newOrder)
+    }
+
+    fun setBgColor(color: Int) {
+        _uiState.value = _uiState.value.copy(bgColor = color)
+    }
+
+    fun setGapPx(gap: Int) {
+        _uiState.value = _uiState.value.copy(gapPx = gap)
     }
 
     fun updateProgress(current: Int, total: Int) {

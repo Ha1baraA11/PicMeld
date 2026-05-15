@@ -14,7 +14,8 @@ import android.os.Build
 import android.provider.MediaStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.InputStream
+import kotlinx.coroutines.yield
+import java.io.ByteArrayInputStream
 
 object ImageProcessor {
 
@@ -24,14 +25,16 @@ object ImageProcessor {
     suspend fun generateGrids(
         context: Context,
         uris: List<Uri>,
+        layout: LayoutConfig = LayoutConfig.LAYOUT_2X2,
+        bgColor: Int = Color.WHITE,
+        gapPx: Int = 0,
         onProgress: (Int, Int) -> Unit
     ): Result<Unit> = withContext(Dispatchers.IO) {
         try {
-            val totalGrids = Math.ceil(uris.size / 4.0).toInt()
-            
+            val totalGrids = Math.ceil(uris.size / layout.groupSize.toDouble()).toInt()
+
             for (i in 0 until totalGrids) {
-                // 每4张1组
-                val groupUris = uris.drop(i * 4).take(4)
+                val groupUris = uris.drop(i * layout.groupSize).take(layout.groupSize)
                 val bitmaps = groupUris.map { loadAndFixBitmap(context, it) }
 
                 // 计算这一组中，图片的最大宽高（有上限限制）来作为2x2的单个格子规格
@@ -58,36 +61,38 @@ object ImageProcessor {
                 val quadrantW = quadW.toInt()
                 val quadrantH = quadH.toInt()
 
-                // 2x2 网格长宽各自乘以 2
-                val outWidth = quadrantW * 2
-                val outHeight = quadrantH * 2
+                // 按布局配置计算画布尺寸
+                val outWidth = quadrantW * layout.columns
+                val outHeight = quadrantH * layout.rows
 
                 val outBitmap = Bitmap.createBitmap(outWidth, outHeight, Bitmap.Config.ARGB_8888)
                 val canvas = Canvas(outBitmap)
-                canvas.drawColor(Color.WHITE) // 设定白板底色
-                
+                canvas.drawColor(bgColor)
+
                 val paint = Paint(Paint.FILTER_BITMAP_FLAG)
+                val effectiveW = quadrantW - gapPx
+                val effectiveH = quadrantH - gapPx
 
                 bitmaps.forEachIndexed { index, bitmap ->
-                    val row = index / 2
-                    val col = index % 2
-                    
-                    val destX = col * quadrantW
-                    val destY = row * quadrantH
+                    val row = index / layout.columns
+                    val col = index % layout.columns
+
+                    val destX = col * quadrantW + gapPx / 2
+                    val destY = row * quadrantH + gapPx / 2
 
                     // 同比例缩小以放进方格（要求等比缩放、不裁剪被白边填补）
                     val scale = minOf(
-                        quadrantW.toFloat() / bitmap.width,
-                        quadrantH.toFloat() / bitmap.height
+                        effectiveW.toFloat() / bitmap.width,
+                        effectiveH.toFloat() / bitmap.height
                     )
-                    
+
                     val scaledW = (bitmap.width * scale).toInt()
                     val scaledH = (bitmap.height * scale).toInt()
-                    
+
                     val matrix = Matrix()
                     matrix.postScale(scale, scale)
-                    val transX = destX + (quadrantW - scaledW) / 2f
-                    val transY = destY + (quadrantH - scaledH) / 2f
+                    val transX = destX + (effectiveW - scaledW) / 2f
+                    val transY = destY + (effectiveH - scaledH) / 2f
                     matrix.postTranslate(transX, transY)
 
                     canvas.drawBitmap(bitmap, matrix, paint)
@@ -95,9 +100,10 @@ object ImageProcessor {
                 }
 
                 // 放入相册并重置这张 2x2 拼版占用
-                saveToGallery(context, outBitmap, "PicMeld_2X2_${System.currentTimeMillis()}.jpg")
+                saveToGallery(context, outBitmap, "PicMeld_${layout.filenameTag}_${System.currentTimeMillis()}.jpg")
                 outBitmap.recycle()
-                
+                yield() // 让出 CPU 给 GC 回收已释放的 Bitmap 内存
+
                 withContext(Dispatchers.Main) {
                     onProgress(i + 1, totalGrids)
                 }
@@ -108,35 +114,31 @@ object ImageProcessor {
         }
     }
 
-    private fun loadAndFixBitmap(context: Context, uri: Uri): Bitmap {
-        context.contentResolver.openInputStream(uri)?.use { stream ->
-            // 第一遍解码获取原始高宽，计算下采样参数以防OOM
-            val options = BitmapFactory.Options()
-            options.inJustDecodeBounds = true
-            BitmapFactory.decodeStream(stream, null, options)
-            options.inSampleSize = calculateInSampleSize(options, MAX_SINGLE_IMAGE_DIMENS, MAX_SINGLE_IMAGE_DIMENS)
-            options.inJustDecodeBounds = false
-            
-            // 第二遍进行真正的解码
-            val imgBitmap = context.contentResolver.openInputStream(uri)?.use { 
-                BitmapFactory.decodeStream(it, null, options)
-            } ?: throw IllegalStateException("无法解码图片: $uri")
+    internal fun loadAndFixBitmap(context: Context, uri: Uri): Bitmap {
+        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            ?: throw IllegalStateException("无法打开图片流: $uri")
 
-            // 解析EXIF以回正倒翻的拍摄图片
-            val rotationFlags = try {
-                context.contentResolver.openInputStream(uri)?.use { exifStream ->
-                    ExifInterface(exifStream).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
-                } ?: ExifInterface.ORIENTATION_NORMAL
-            } catch (e: Exception) {
-                ExifInterface.ORIENTATION_NORMAL
+        // 第一遍解码获取原始高宽，计算下采样参数以防OOM
+        val boundsOptions = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeByteArray(bytes, 0, bytes.size, boundsOptions)
+        boundsOptions.inSampleSize = calculateInSampleSize(boundsOptions, MAX_SINGLE_IMAGE_DIMENS, MAX_SINGLE_IMAGE_DIMENS)
+        boundsOptions.inJustDecodeBounds = false
+
+        // 第二遍进行真正的解码
+        val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, boundsOptions)
+            ?: throw IllegalStateException("无法解码图片: $uri")
+
+        // 解析EXIF以回正倒翻的拍摄图片
+        val rotationFlags = try {
+            ByteArrayInputStream(bytes).use { bs ->
+                ExifInterface(bs).getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
             }
-            
-            return rotateBitmap(imgBitmap, rotationFlags)
-        }
-        throw IllegalStateException("无法打开图片流: $uri")
+        } catch (_: Exception) { ExifInterface.ORIENTATION_NORMAL }
+
+        return rotateBitmap(bitmap, rotationFlags)
     }
 
-    private fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
+    internal fun calculateInSampleSize(options: BitmapFactory.Options, reqWidth: Int, reqHeight: Int): Int {
         val (height: Int, width: Int) = options.outHeight to options.outWidth
         var inSampleSize = 1
         if (height > reqHeight || width > reqWidth) {
@@ -149,7 +151,7 @@ object ImageProcessor {
         return inSampleSize
     }
 
-    private fun rotateBitmap(bitmap: Bitmap, orientation: Int): Bitmap {
+    internal fun rotateBitmap(bitmap: Bitmap, orientation: Int): Bitmap {
         val matrix = Matrix()
         when (orientation) {
             ExifInterface.ORIENTATION_ROTATE_90 -> matrix.postRotate(90f)

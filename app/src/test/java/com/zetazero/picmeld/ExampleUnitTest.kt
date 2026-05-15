@@ -1,4 +1,4 @@
-package com.zetazero.photogrid
+package com.zetazero.picmeld
 
 import org.junit.Test
 

@@ -1,4 +1,4 @@
-package com.zetazero.photogrid
+package com.zetazero.picmeld
 
 import android.content.ContentValues
 import android.content.Context
@@ -95,7 +95,7 @@ object ImageProcessor {
                 }
 
                 // 放入相册并重置这张 2x2 拼版占用
-                saveToGallery(context, outBitmap, "PhotoGrid_2X2_${System.currentTimeMillis()}.jpg")
+                saveToGallery(context, outBitmap, "PicMeld_2X2_${System.currentTimeMillis()}.jpg")
                 outBitmap.recycle()
                 
                 withContext(Dispatchers.Main) {
@@ -169,7 +169,7 @@ object ImageProcessor {
             put(MediaStore.Images.Media.DISPLAY_NAME, title)
             put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/PhotoGrid")
+                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/PicMeld")
                 put(MediaStore.Images.Media.IS_PENDING, 1)
             }
         }

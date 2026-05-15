@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "PhotoGrid"
+rootProject.name = "PicMeld"
 include(":app")

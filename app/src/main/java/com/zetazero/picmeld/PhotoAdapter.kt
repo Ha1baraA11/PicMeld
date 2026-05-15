@@ -1,10 +1,10 @@
-package com.zetazero.photogrid
+package com.zetazero.picmeld
 
 import android.net.Uri
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
-import com.zetazero.photogrid.databinding.ItemPhotoBinding
+import com.zetazero.picmeld.databinding.ItemPhotoBinding
 
 class PhotoAdapter(
     private val onRemoveClick: (Uri) -> Unit

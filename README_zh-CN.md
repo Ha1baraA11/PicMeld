@@ -59,6 +59,11 @@ cd PicMeld
 
 APK 输出路径：`app/build/outputs/apk/debug/app-debug.apk`
 
+重命名为发行版：
+```bash
+cp app/build/outputs/apk/debug/app-debug.apk PicMeld.apk
+```
+
 ## 许可证
 
 MIT

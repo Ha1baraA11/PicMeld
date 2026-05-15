@@ -59,6 +59,11 @@ cd PicMeld
 
 APK output: `app/build/outputs/apk/debug/app-debug.apk`
 
+Rename for distribution:
+```bash
+cp app/build/outputs/apk/debug/app-debug.apk PicMeld.apk
+```
+
 ## License
 
 MIT

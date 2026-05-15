@@ -1,4 +1,4 @@
-package com.zetazero.picmeld
+package com.ha1baraa11.picmeld
 
 import org.junit.Test
 

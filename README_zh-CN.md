@@ -33,7 +33,7 @@
 ## 项目架构
 
 ```
-com.zetazero.picmeld/
+com.ha1baraa11.picmeld/
 ├── MainActivity.kt      # UI 层 — 图片选择器、缩略图网格、进度遮罩
 ├── MainViewModel.kt     # 状态管理 — 已选 URI、进度、错误信息
 ├── ImageProcessor.kt    # 核心引擎 — Bitmap 缩放、EXIF 修正、Canvas 合图

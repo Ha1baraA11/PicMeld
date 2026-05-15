@@ -1,4 +1,4 @@
-package com.zetazero.picmeld
+package com.ha1baraa11.picmeld
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -16,7 +16,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
-import com.zetazero.picmeld.databinding.ActivityMainBinding
+import com.ha1baraa11.picmeld.databinding.ActivityMainBinding
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {

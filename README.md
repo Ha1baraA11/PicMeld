@@ -33,7 +33,7 @@
 ## Architecture
 
 ```
-com.zetazero.picmeld/
+com.ha1baraa11.picmeld/
 ├── MainActivity.kt      # UI layer — photo picker, RecyclerView, progress overlay
 ├── MainViewModel.kt     # State management — selected URIs, progress, errors
 ├── ImageProcessor.kt    # Core engine — bitmap scaling, EXIF fix, Canvas compositing

@@ -5,7 +5,7 @@
 <h1 align="center">PicMeld</h1>
 
 <p align="center">
-  <strong>Batch photo collage — merge up to 200 photos into 2x2 grids</strong><br>
+  <strong>Batch photo collage — merge up to 200 photos into customizable grid layouts</strong><br>
   Lightweight, offline, zero permissions beyond storage
 </p>
 
@@ -17,8 +17,11 @@
 
 ## Features
 
-- **Batch processing** — select up to 200 photos, automatically grouped into 2x2 grid collages
-- **Smart scaling** — images are proportionally scaled to fit without cropping; white fills gaps
+- **Multiple layouts** — choose from 2x2, 3x3, or 1x3 grid templates
+- **Drag to reorder** — long-press and drag thumbnails to rearrange photo order
+- **Customizable output** — pick background color and adjust gap between images
+- **Batch processing** — select up to 200 photos, automatically grouped by chosen layout
+- **Smart scaling** — images are proportionally scaled to fit without cropping; background fills gaps
 - **EXIF correction** — auto-rotates photos based on EXIF orientation metadata
 - **Append mode** — add photos in multiple batches without duplicates
 - **Live progress** — real-time progress bar with count and percentage
@@ -34,10 +37,12 @@
 
 ```
 com.ha1baraa11.picmeld/
-├── MainActivity.kt      # UI layer — photo picker, RecyclerView, progress overlay
-├── MainViewModel.kt     # State management — selected URIs, progress, errors
+├── MainActivity.kt      # UI layer — photo picker, layout/color/gap controls, progress overlay
+├── MainViewModel.kt     # State management — selected URIs, layout config, progress, errors
 ├── ImageProcessor.kt    # Core engine — bitmap scaling, EXIF fix, Canvas compositing
-└── PhotoAdapter.kt      # RecyclerView adapter — thumbnail grid with delete buttons
+├── PhotoAdapter.kt      # RecyclerView adapter — thumbnail grid with drag-to-reorder
+├── LayoutConfig.kt      # Layout data class — 2x2, 3x3, 1x3 presets
+└── DragSwipeCallback.kt # ItemTouchHelper callback for drag-to-reorder
 ```
 
 **Stack:** Kotlin · MVVM · ViewBinding · Coroutines · Material 3
@@ -45,9 +50,11 @@ com.ha1baraa11.picmeld/
 ## How It Works
 
 1. Tap **Select Photos** to pick images from your gallery (multi-select supported)
-2. Preview the 3-column thumbnail grid; tap any image to remove it
-3. Tap **Generate** — the app groups every 4 photos into one 2x2 collage
-4. Output JPGs are saved to `Pictures/PicMeld/` in your system gallery
+2. Choose a layout: 2x2, 3x3, or 1x3
+3. Long-press and drag thumbnails to reorder; tap to remove
+4. Optionally adjust background color and gap between images
+5. Tap **Generate** — the app groups photos by layout and composites each grid
+6. Output JPGs are saved to `Pictures/PicMeld/` in your system gallery
 
 ## Build
 

@@ -3,10 +3,13 @@ package com.ha1baraa11.picmeld
 import android.Manifest
 import android.content.pm.PackageManager
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.View
+import android.widget.SeekBar
 import android.widget.Toast
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -14,6 +17,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import com.ha1baraa11.picmeld.databinding.ActivityMainBinding
@@ -59,18 +63,85 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         setupRecyclerView()
+        setupLayoutSelector()
+        setupColorPicker()
+        setupGapSlider()
         setupListeners()
         observeUiState()
     }
 
     private fun setupRecyclerView() {
-        // 配置当点击每个项时，进行移除动作，推入 ViewModel 处理
-        photoAdapter = PhotoAdapter { uri ->
-            viewModel.removeUri(uri)
-        }
-        // 关键修复：必须设置 LayoutManager，否则视图只会收集数据，不知道怎么排列，因此显示空白
+        photoAdapter = PhotoAdapter(
+            onRemoveClick = { uri -> viewModel.removeUri(uri) },
+            onOrderChanged = { newOrder -> viewModel.reorderUris(newOrder) }
+        )
         binding.rvPhotos.layoutManager = androidx.recyclerview.widget.GridLayoutManager(this, 3)
         binding.rvPhotos.adapter = photoAdapter
+        val touchHelper = ItemTouchHelper(DragSwipeCallback(photoAdapter))
+        touchHelper.attachToRecyclerView(binding.rvPhotos)
+    }
+
+    private fun setupLayoutSelector() {
+        binding.chipGroupLayout.setOnCheckedStateChangeListener { _, checkedIds ->
+            if (checkedIds.isNotEmpty()) {
+                val layout = when (checkedIds[0]) {
+                    R.id.chip3x3 -> LayoutConfig.LAYOUT_3X3
+                    R.id.chip1x3 -> LayoutConfig.LAYOUT_1X3
+                    else -> LayoutConfig.LAYOUT_2X2
+                }
+                viewModel.setLayout(layout)
+            }
+        }
+    }
+
+    private fun setupColorPicker() {
+        val colors = intArrayOf(
+            Color.WHITE, Color.BLACK,
+            0xFFE53935.toInt(), 0xFF1E88E5.toInt(),
+            0xFF43A047.toInt(), 0xFF9E9E9E.toInt()
+        )
+        val views = listOf(
+            binding.colorWhite, binding.colorBlack,
+            binding.colorRed, binding.colorBlue,
+            binding.colorGreen, binding.colorGray
+        )
+        views.forEachIndexed { index, view ->
+            val bg = view.background as? GradientDrawable ?: GradientDrawable().also { view.background = it }
+            bg.setColor(colors[index])
+            bg.setStroke(if (colors[index] == Color.WHITE) 2 else 0, 0xFFCCCCCC.toInt())
+            view.setOnClickListener {
+                viewModel.setBgColor(colors[index])
+                updateColorSelection(index)
+            }
+        }
+        updateColorSelection(0)
+    }
+
+    private fun updateColorSelection(selectedIndex: Int) {
+        val views = listOf(
+            binding.colorWhite, binding.colorBlack,
+            binding.colorRed, binding.colorBlue,
+            binding.colorGreen, binding.colorGray
+        )
+        views.forEachIndexed { index, view ->
+            val bg = view.background as? GradientDrawable ?: return@forEachIndexed
+            if (index == selectedIndex) {
+                bg.setStroke(3, 0xFF000000.toInt())
+            } else {
+                bg.setStroke(if (index == 0) 2 else 0, 0xFFCCCCCC.toInt())
+            }
+        }
+    }
+
+    private fun setupGapSlider() {
+        binding.seekBarGap.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                viewModel.setGapPx(progress)
+                binding.tvGapValue.text = "${progress}px"
+            }
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+        })
     }
 
     private fun setupListeners() {
@@ -104,12 +175,13 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startGeneration() {
-        val uris = viewModel.uiState.value.selectedUris
+        val state = viewModel.uiState.value
+        val uris = state.selectedUris
         if (uris.isEmpty()) return
 
         viewModel.setProcessing(true)
         lifecycleScope.launch {
-            val result = ImageProcessor.generateGrids(this@MainActivity, uris) { current, total ->
+            val result = ImageProcessor.generateGrids(this@MainActivity, uris, state.selectedLayout, state.bgColor, state.gapPx) { current, total ->
                 viewModel.updateProgress(current, total)
             }
 
